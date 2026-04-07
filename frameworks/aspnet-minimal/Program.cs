@@ -61,18 +61,20 @@ app.MapGet("/compression", Handlers.Compression);
 app.MapGet("/db", Handlers.Database);
 app.MapGet("/async-db", Handlers.AsyncDatabase);
 
-if (Directory.Exists("/data/static"))
+var typeProvider = new FileExtensionContentTypeProvider();
+typeProvider.Mappings[".js"] = "application/javascript";
+
+app.MapGet("/static/{**path}", (string path) => 
 {
-    var typeProvider = new FileExtensionContentTypeProvider();
+    var filePath = Path.Combine("/data/static", path);
     
-    typeProvider.Mappings[".js"] = "application/javascript";
-    
-    app.UseStaticFiles(new StaticFileOptions
+    if (!typeProvider.TryGetContentType(filePath, out var contentType))
     {
-        FileProvider = new PhysicalFileProvider("/data/static"),
-        ContentTypeProvider = typeProvider,
-        RequestPath = "/static"
-    });
-}
+        contentType = "application/octet-stream";
+    }
+    
+    return TypedResults.File(filePath, contentType); 
+})
+.ShortCircuit();
 
 app.Run();
